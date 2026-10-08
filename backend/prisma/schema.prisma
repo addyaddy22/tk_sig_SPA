@@ -1,0 +1,136 @@
+// TK Signature Spa - data model
+//
+// Double-booking protection lives in three layers:
+//   1. AvailabilityService only offers slots that are genuinely free.
+//   2. BookingsService re-checks inside a serialized transaction (advisory lock).
+//   3. PostgreSQL EXCLUSION constraints (see migrations/*_init/migration.sql) make
+//      overlapping active bookings for the same therapist / client impossible.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  THERAPIST
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role       @default(CLIENT)
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @db.Timestamptz(3)
+  bookings     Booking[]  @relation("ClientBookings")
+  therapist    Therapist?
+}
+
+model Service {
+  id          String             @id @default(cuid())
+  name        String
+  slug        String             @unique
+  description String
+  category    String
+  durationMin Int
+  /// Cleanup / preparation time blocked after the treatment.
+  bufferMin   Int                @default(15)
+  priceCents  Int
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime           @updatedAt @db.Timestamptz(3)
+  therapists  TherapistService[]
+  bookings    Booking[]
+}
+
+model Therapist {
+  id           String             @id @default(cuid())
+  name         String
+  title        String?
+  bio          String?
+  active       Boolean            @default(true)
+  userId       String?            @unique
+  user         User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
+  services     TherapistService[]
+  workingHours WorkingHours[]
+  timeOff      TimeOff[]
+  bookings     Booking[]
+}
+
+model TherapistService {
+  therapistId String
+  serviceId   String
+  therapist   Therapist @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+  service     Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([therapistId, serviceId])
+}
+
+/// Weekly schedule. dayOfWeek: 1 = Monday ... 7 = Sunday (ISO).
+/// startMin / endMin are minutes after local midnight in the spa's timezone.
+model WorkingHours {
+  id          String    @id @default(cuid())
+  therapistId String
+  dayOfWeek   Int
+  startMin    Int
+  endMin      Int
+  therapist   Therapist @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@index([therapistId, dayOfWeek])
+}
+
+model TimeOff {
+  id          String    @id @default(cuid())
+  therapistId String
+  startAt     DateTime  @db.Timestamptz(3)
+  endAt       DateTime  @db.Timestamptz(3)
+  reason      String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  therapist   Therapist @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@index([therapistId, startAt])
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  reference    String        @unique
+  clientId     String
+  therapistId  String
+  serviceId    String
+  startAt      DateTime      @db.Timestamptz(3)
+  /// When the treatment ends (startAt + service duration).
+  endAt        DateTime      @db.Timestamptz(3)
+  /// endAt + cleanup buffer. The therapist is blocked in [startAt, blockedUntil).
+  blockedUntil DateTime      @db.Timestamptz(3)
+  status       BookingStatus @default(CONFIRMED)
+  priceCents   Int
+  notes        String?
+  cancelledAt  DateTime?     @db.Timestamptz(3)
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
+  client       User          @relation("ClientBookings", fields: [clientId], references: [id])
+  therapist    Therapist     @relation(fields: [therapistId], references: [id])
+  service      Service       @relation(fields: [serviceId], references: [id])
+
+  @@index([therapistId, startAt])
+  @@index([clientId, startAt])
+  @@index([startAt])
+}

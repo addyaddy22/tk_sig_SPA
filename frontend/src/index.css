@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-sand-50: #fbf8f3;
+  --color-sand-100: #f4eee4;
+  --color-sand-200: #e9dfcf;
+  --color-sand-300: #d9c9b0;
+  --color-forest-950: #16211c;
+  --color-forest-900: #1f2d27;
+  --color-forest-800: #2a3d34;
+  --color-forest-700: #35503f;
+  --color-forest-600: #466a55;
+  --color-forest-100: #e3ebe5;
+  --color-gold-600: #a07a44;
+  --color-gold-500: #b8925a;
+  --color-gold-400: #cda977;
+  --color-gold-100: #f5ecdd;
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body { @apply bg-sand-50 text-forest-900 font-sans; }
+  h1, h2, h3 { @apply font-display; }
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply btn bg-forest-800 text-sand-50 hover:bg-forest-700;
+}
+
+@utility btn-gold {
+  @apply btn bg-gold-500 text-forest-950 hover:bg-gold-400;
+}
+
+@utility btn-ghost {
+  @apply btn border border-forest-800/20 text-forest-800 hover:bg-forest-800/5;
+}
+
+@utility btn-danger {
+  @apply btn border border-red-700/30 text-red-700 hover:bg-red-50;
+}
+
+@utility card {
+  @apply rounded-2xl border border-sand-200 bg-white shadow-sm;
+}
+
+@utility input {
+  @apply w-full rounded-xl border border-sand-300 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-forest-600 focus:ring-2 focus:ring-forest-600/15;
+}
+
+@utility label {
+  @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-forest-700/80;
+}
+
+@utility eyebrow {
+  @apply text-xs font-semibold uppercase tracking-[0.2em] text-gold-600;
+}
