@@ -7,7 +7,7 @@
     "db:up": "docker compose up -d --build db",
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f db",
-    "db:psql": "docker compose exec db psql -U spa -d tk_sig_spa",
+    "db:psql": "docker compose exec db sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"'",
     "db:reset": "docker compose down -v && docker compose up -d --build db",
     "db:migrate": "npm --prefix backend run prisma:deploy",
     "db:seed": "npm --prefix backend run db:seed",

@@ -29,7 +29,7 @@ class SlotUnavailable extends Error {
 }
 
 const bookingInclude = {
-  service: { select: { id: true, name: true, durationMin: true, category: true } },
+  service: { select: { id: true, name: true, durationMin: true, bufferMin: true, category: true } },
   therapist: { select: { id: true, name: true, title: true } },
   client: { select: { id: true, name: true, email: true, phone: true } },
 } satisfies Prisma.BookingInclude;
@@ -285,7 +285,7 @@ export class BookingsService {
     // Therapists only ever see their own schedule.
     const therapistId = user.role === Role.THERAPIST ? (user.therapistId ?? '__none__') : q.therapistId;
 
-    return this.prisma.booking.findMany({
+    const rows = await this.prisma.booking.findMany({
       where: {
         ...(therapistId ? { therapistId } : {}),
         ...(q.status ? { status: q.status } : {}),
@@ -295,8 +295,40 @@ export class BookingsService {
       },
       orderBy: { startAt: 'asc' },
       include: bookingInclude,
-      take: 500,
-    }).then((rows) => rows.map((b) => ({ ...b, localDate: DateTime.fromJSDate(b.startAt).setZone(tz).toISODate() })));
+      take: BookingsService.LIST_LIMIT,
+    });
+
+    // Admins also get each client's all-time history, so repeat no-shows stand out.
+    const history = user.role === Role.ADMIN ? await this.clientHistory(rows.map((b) => b.clientId)) : undefined;
+    return rows.map((b) => ({
+      ...b,
+      localDate: DateTime.fromJSDate(b.startAt).setZone(tz).toISODate(),
+      ...(history ? { clientHistory: history.get(b.clientId) } : {}),
+    }));
+  }
+
+  static readonly LIST_LIMIT = 2000;
+
+  /** Booking counts per client, by status, across all time. */
+  private async clientHistory(clientIds: string[]) {
+    const ids = [...new Set(clientIds)];
+    const empty = () => ({ total: 0, completed: 0, cancelled: 0, noShow: 0 });
+    const map = new Map(ids.map((id) => [id, empty()]));
+    if (!ids.length) return map;
+    const groups = await this.prisma.booking.groupBy({
+      by: ['clientId', 'status'],
+      where: { clientId: { in: ids } },
+      _count: { _all: true },
+    });
+    for (const g of groups) {
+      const h = map.get(g.clientId)!;
+      const n = g._count._all;
+      h.total += n;
+      if (g.status === BookingStatus.COMPLETED) h.completed += n;
+      if (g.status === BookingStatus.CANCELLED) h.cancelled += n;
+      if (g.status === BookingStatus.NO_SHOW) h.noShow += n;
+    }
+    return map;
   }
 
   async findOne(user: AuthUser, id: string) {

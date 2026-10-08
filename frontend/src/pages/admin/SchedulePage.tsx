@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConflictNotice } from '../../components/ConflictNotice';
 import { SlotPicker, type SlotSelection } from '../../components/SlotPicker';
@@ -6,7 +6,7 @@ import { Alert, Modal, Spinner, StatusBadge } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { api, ApiError, qs } from '../../lib/api';
 import { useServices, useTherapists } from '../../lib/queries';
-import { addDays, fmtLongDate, fmtTime, minToHHMM, minuteOfDay, money, todayYmd, ymdParts } from '../../lib/time';
+import { addDays, fmtDateTime, fmtDuration, fmtLongDate, fmtTime, minToHHMM, minuteOfDay, money, todayYmd, ymdParts } from '../../lib/time';
 import type { Booking, BookingConflict, BookingStatus, Therapist } from '../../lib/types';
 
 const PX_PER_MIN = 1.1;
@@ -170,7 +170,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BookingDetails({ booking: b, onClose, canManage }: { booking: Booking; onClose: () => void; canManage: boolean }) {
+export function BookingDetails({ booking: b, onClose, canManage }: { booking: Booking; onClose: () => void; canManage: boolean }) {
   const qc = useQueryClient();
   const setStatus = useMutation({
     mutationFn: (status: BookingStatus) => api<Booking>(`/bookings/${b.id}/status`, { method: 'PATCH', body: { status } }),
@@ -181,17 +181,41 @@ function BookingDetails({ booking: b, onClose, canManage }: { booking: Booking; 
     },
   });
   const activeNow = b.status === 'CONFIRMED' || b.status === 'PENDING';
+  const h = b.clientHistory;
+  const row = (label: string, value: ReactNode) => (
+    <div className="grid grid-cols-[7.5rem_1fr] gap-2 py-1.5">
+      <dt className="text-forest-700/60">{label}</dt>
+      <dd className="min-w-0 break-words">{value}</dd>
+    </div>
+  );
 
   return (
     <Modal open onClose={onClose} title={b.service.name}>
-      <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2"><StatusBadge status={b.status} /><span className="text-forest-700/60">Ref {b.reference}</span></div>
-        <p><span className="text-forest-700/60">When:</span> {fmtLongDate(b.startAt)}, {fmtTime(b.startAt)} – {fmtTime(b.endAt)}</p>
-        <p><span className="text-forest-700/60">Therapist:</span> {b.therapist.name}</p>
-        <p><span className="text-forest-700/60">Client:</span> {b.client.name} · {b.client.email}{b.client.phone ? ` · ${b.client.phone}` : ''}</p>
-        <p><span className="text-forest-700/60">Price:</span> {money(b.priceCents)}</p>
-        {b.notes && <p className="rounded-xl bg-sand-100 p-3"><span className="text-forest-700/60">Notes:</span> {b.notes}</p>}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <StatusBadge status={b.status} />
+        <span className="rounded-full bg-sand-100 px-2.5 py-0.5 font-mono text-xs">{b.reference}</span>
+        <span className="text-xs text-forest-700/60">{b.service.category}</span>
       </div>
+      <dl className="divide-y divide-sand-100 text-sm">
+        {row('When', <>{fmtLongDate(b.startAt)}<br />{fmtTime(b.startAt)} – {fmtTime(b.endAt)} <span className="text-forest-700/60">({fmtDuration(b.service.durationMin)}{b.service.bufferMin ? ` + ${b.service.bufferMin} min cleanup` : ''})</span></>)}
+        {row('Therapist', b.therapist.name)}
+        {row('Client', <>
+          <span className="font-semibold">{b.client.name}</span><br />
+          <a className="text-forest-700 underline decoration-sand-300 underline-offset-2 hover:decoration-forest-600" href={`mailto:${b.client.email}`}>{b.client.email}</a>
+          {b.client.phone
+            ? <> · <a className="text-forest-700 underline decoration-sand-300 underline-offset-2 hover:decoration-forest-600" href={`tel:${b.client.phone}`}>{b.client.phone}</a></>
+            : <span className="text-amber-700"> · no phone on file</span>}
+        </>)}
+        {h && row('Client history', <>
+          {h.total} booking{h.total === 1 ? '' : 's'} · {h.completed} completed
+          {h.cancelled > 0 && <span className="text-forest-700/70"> · {h.cancelled} cancelled</span>}
+          {h.noShow > 0 && <span className="font-semibold text-red-700"> · {h.noShow} no-show{h.noShow === 1 ? '' : 's'}</span>}
+        </>)}
+        {row('Price', money(b.priceCents))}
+        {b.createdAt && row('Booked on', fmtDateTime(b.createdAt))}
+        {b.cancelledAt && row('Cancelled on', fmtDateTime(b.cancelledAt))}
+      </dl>
+      {b.notes && <p className="mt-3 rounded-xl bg-sand-100 p-3 text-sm"><span className="text-forest-700/60">Notes:</span> {b.notes}</p>}
       {setStatus.error && <div className="mt-4"><Alert>{(setStatus.error as Error).message}</Alert></div>}
       {canManage && activeNow && (
         <div className="mt-6 flex flex-wrap gap-2">

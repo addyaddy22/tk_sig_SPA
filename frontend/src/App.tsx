@@ -12,6 +12,7 @@ import { HomePage } from './pages/HomePage';
 import { MyBookingsPage } from './pages/MyBookingsPage';
 import { TreatmentsPage } from './pages/TreatmentsPage';
 import { AdminLayout } from './pages/admin/AdminLayout';
+import { BookingsPage } from './pages/admin/BookingsPage';
 import { SchedulePage } from './pages/admin/SchedulePage';
 import { ServicesPage } from './pages/admin/ServicesPage';
 import { TherapistsPage } from './pages/admin/TherapistsPage';
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="my-bookings" element={<RequireAuth><MyBookingsPage /></RequireAuth>} />
         <Route path="admin" element={<RequireAuth roles={['ADMIN', 'THERAPIST']}><AdminLayout /></RequireAuth>}>
           <Route index element={<SchedulePage />} />
+          <Route path="bookings" element={<RequireAuth roles={['ADMIN']}><BookingsPage /></RequireAuth>} />
           <Route path="therapists" element={<RequireAuth roles={['ADMIN']}><TherapistsPage /></RequireAuth>} />
           <Route path="services" element={<RequireAuth roles={['ADMIN']}><ServicesPage /></RequireAuth>} />
         </Route>
