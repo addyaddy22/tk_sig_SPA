@@ -6,7 +6,7 @@
 # Build & run on its own:
 #   docker build -t tk-sig-spa-postgres ./docker/postgres
 #   docker run -d --name tk_sig_spa_db -p 5432:5432 \
-#     -e POSTGRES_PASSWORD=spa_password -v tk_sig_spa_pgdata:/var/lib/postgresql/data \
+#     -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" -v tk_sig_spa_pgdata:/var/lib/postgresql/data \
 #     tk-sig-spa-postgres
 #
 # Or simply: docker compose up -d db   (from the project root)

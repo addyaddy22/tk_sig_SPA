@@ -89,9 +89,21 @@ export interface Booking {
   status: BookingStatus;
   priceCents: number;
   notes: string | null;
-  service: { id: string; name: string; durationMin: number; category: string };
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  service: { id: string; name: string; durationMin: number; bufferMin: number; category: string };
   therapist: TherapistRef;
   client: { id: string; name: string; email: string; phone: string | null };
+  /** Admin list only: the client's all-time booking counts. */
+  clientHistory?: ClientHistory;
+}
+
+export interface ClientHistory {
+  total: number;
+  completed: number;
+  cancelled: number;
+  noShow: number;
 }
 
 export type RuleReason = 'ALREADY_BOOKED' | 'OUTSIDE_WORKING_HOURS' | 'TIME_OFF';

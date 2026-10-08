@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-spa}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spa_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (see .env.example)}
       POSTGRES_DB: ${POSTGRES_DB:-tk_sig_spa}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"

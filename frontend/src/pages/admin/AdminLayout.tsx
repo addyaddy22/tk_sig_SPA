@@ -7,6 +7,7 @@ export function AdminLayout() {
     { to: '/admin', label: 'Schedule', end: true },
     ...(user?.role === 'ADMIN'
       ? [
+          { to: '/admin/bookings', label: 'All bookings' },
           { to: '/admin/therapists', label: 'Therapists' },
           { to: '/admin/services', label: 'Services' },
         ]

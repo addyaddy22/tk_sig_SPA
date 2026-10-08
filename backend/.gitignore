@@ -5,3 +5,4 @@ dist/
 coverage/
 *.log
 *.tsbuildinfo
+!.env.example

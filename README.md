@@ -123,12 +123,14 @@ The image is defined in `docker/postgres/Dockerfile`: the official PostgreSQL 16
 that enables `btree_gist`, which the no-double-booking constraints need.
 
 ```bash
+cp .env.example .env               # then set POSTGRES_PASSWORD
 docker compose up -d --build db      # build the image and start the container (or: npm run db:up)
 docker compose ps                    # wait for STATUS "healthy"
 ```
-It listens on `localhost:5432` with user `spa`, password `spa_password`, database `tk_sig_spa`. That matches the default
-`DATABASE_URL` in `backend/.env.example`. Data lives in the named volume `tk_sig_spa_pgdata`, so it survives restarts.
-To change the credentials or port, copy `.env.example` to `.env` in the project root and update `DATABASE_URL` to match.
+Credentials come from `.env` in the project root (copy `.env.example` and set `POSTGRES_PASSWORD`, e.g.
+`openssl rand -hex 24`). Compose refuses to start without a password. It listens on `localhost:${POSTGRES_PORT}` with
+`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`; `DATABASE_URL` in `backend/.env` must use the same values.
+Data lives in the named volume `tk_sig_spa_pgdata`, so it survives restarts.
 
 | Command (project root) | What it does |
 | ---------------------- | ------------ |
@@ -141,7 +143,7 @@ To change the credentials or port, copy `.env.example` to `.env` in the project 
 Without Compose:
 ```bash
 docker build -t tk-sig-spa-postgres ./docker/postgres
-docker run -d --name tk_sig_spa_db -p 5432:5432 -e POSTGRES_PASSWORD=spa_password \
+docker run -d --name tk_sig_spa_db -p 5432:5432 -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
   -v tk_sig_spa_pgdata:/var/lib/postgresql/data tk-sig-spa-postgres
 ```
 
